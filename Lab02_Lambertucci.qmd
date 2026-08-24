@@ -1,0 +1,95 @@
+---
+title: "lab02"
+author: "Cauê Esteve Lambertucci 296094"
+format: pdf
+editor: visual
+---
+
+1\.
+
+a\) números de voos com atraso \> 10, o número total de voos em cada grupo com essas duas coisas podemos combina-las de varios lotes somando-as e então calculando a porcentagem final
+
+2\.
+
+```{r}
+library(dplyr)
+library(readr)
+
+getStats <- function(input, pos) {
+  input %>%
+    filter(AIRLINE %in% c("AA", "DL", "UA", "US")) %>%
+    filter(!is.na(ARRIVAL_DELAY)) %>%
+    group_by(YEAR, MONTH, DAY, AIRLINE) %>%
+    summarise(
+      atrasos = sum(ARRIVAL_DELAY > 10),
+      total = n(),
+      .groups = "drop"
+    )
+}
+```
+
+3\.
+
+```{r}
+resultado_bruto <- read_csv_chunked(
+  "flights.csv",
+  callback = DataFrameCallback$new(getStats),
+  chunk_size = 100000,
+  col_types = cols_only(
+    YEAR = col_integer(),
+    MONTH = col_integer(),
+    DAY = col_integer(),
+    AIRLINE = col_character(),
+    ARRIVAL_DELAY = col_double()
+  )
+)
+```
+
+4\.
+
+```{r}
+computeStats <- function(stats) {
+  stats %>%
+    group_by(AIRLINE, YEAR, MONTH, DAY) %>%
+    summarise(
+      atrasos = sum(atrasos),
+      total = sum(total),
+      .groups = "drop"
+    ) %>%
+    mutate(
+      Data = as.Date(paste(YEAR, MONTH, DAY, sep = "-")),
+      Perc = atrasos / total
+    ) %>%
+    rename(Cia = AIRLINE) %>%
+    select(Cia, Data, Perc)
+}
+
+resultado <- computeStats(resultado_bruto)
+resultado
+```
+
+5\.
+
+```{r}
+library(ggcal)
+library(ggplot2)
+
+pal <- scale_fill_gradient(low = "#4575b4", high = "#d73027")
+
+baseCalendario <- function(stats, cia) {
+  sub <- stats %>% filter(Cia == cia)
+  ggcal(sub$Data, sub$Perc)
+}
+
+cAA <- baseCalendario(resultado, "AA")
+cDL <- baseCalendario(resultado, "DL")
+cUA <- baseCalendario(resultado, "UA")
+cUS <- baseCalendario(resultado, "US")
+```
+
+```{r}
+cAA + pal + ggtitle("American Airlines")
+cDL + pal + ggtitle("Delta Airlines")
+cUA + pal + ggtitle("United Airlines")
+cUS + pal + ggtitle("US Airways")
+```
