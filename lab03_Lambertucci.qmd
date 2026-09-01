@@ -1,0 +1,134 @@
+---
+title: "Lab03"
+author: Cauê Esteves Lambertucci - 296094
+format: pdf
+editor: visual
+---
+
+## 1.
+
+```{r}
+library(readr)
+library(dplyr)
+
+airports <- read_csv(
+  "airports.csv",
+  col_select = c(IATA_CODE, CITY, STATE, LATITUDE, LONGITUDE)
+)
+
+airlines <- read_csv("airlines.csv")
+
+aux <- data.frame(
+  DESTINATION_AIRPORT = character(),
+  total_atraso = numeric(),
+  quantidade = numeric()
+)
+
+ler_parte <- function(x, pos) {
+  x <- x[substr(x$DESTINATION_AIRPORT, 1, 1) != "1", ]
+  x <- na.omit(x)
+
+  resumo <- x %>%
+    group_by(DESTINATION_AIRPORT) %>%
+    summarise(
+      total_atraso = sum(ARRIVAL_DELAY),
+      quantidade = n()
+    )
+
+  aux <<- rbind(aux, resumo)
+}
+
+read_csv_chunked(
+  "flights.csv",
+  col_types = cols_only(
+    DESTINATION_AIRPORT = col_character(),
+    ARRIVAL_DELAY = col_double()
+  ),
+  chunk_size = 1000000,
+  callback = SideEffectChunkCallback$new(ler_parte)
+)
+
+flights <- aux %>%
+  group_by(DESTINATION_AIRPORT) %>%
+  summarise(
+    total_atraso = sum(total_atraso),
+    quantidade = sum(quantidade)
+  ) %>%
+  mutate(atraso_medio = total_atraso / quantidade)
+```
+
+## 2.
+
+a)  A chave em `flights` é `DESTINATION_AIRPORT`.
+
+b)  A chave em `airports` é `IATA_CODE`.
+
+c)  Não aparecem aeroportos presentes em `flights` e ausentes em `airports`.
+
+```{r}
+anti_join(
+  flights,
+  airports,
+  by = c("DESTINATION_AIRPORT" = "IATA_CODE")
+)
+```
+
+d)  A operação usada é `left_join`. Como as chaves possuem nomes diferentes, elas precisam ser indicadas no argumento `by`.
+
+e)  
+
+```{r}
+flights <- flights %>%
+  left_join(
+    airports %>% select(IATA_CODE, CITY, STATE),
+    by = c("DESTINATION_AIRPORT" = "IATA_CODE")
+  )
+```
+
+## 3.
+
+```{r}
+airports %>%
+  group_by(STATE) %>%
+  summarise(aeroportos = n()) %>%
+  arrange(desc(aeroportos))
+```
+
+## 4.
+
+```{r}
+library(ggplot2)
+library(maps)
+
+dados_mapa <- flights %>%
+  left_join(
+    airports %>% select(IATA_CODE, LATITUDE, LONGITUDE),
+    by = c("DESTINATION_AIRPORT" = "IATA_CODE")
+  )
+
+mapa_eua <- map_data("state")
+
+ggplot() +
+  geom_polygon(
+    data = mapa_eua,
+    aes(x = long, y = lat, group = group),
+    fill = "white",
+    color = "gray"
+  ) +
+  geom_point(
+    data = dados_mapa,
+    aes(
+      x = LONGITUDE,
+      y = LATITUDE,
+      color = atraso_medio
+    ),
+    size = 2
+  ) +
+  labs(
+    x = "Longitude",
+    y = "Latitude",
+    color = "Atraso médio"
+  ) +
+  coord_fixed(1.3) +
+  theme_minimal()
+```
