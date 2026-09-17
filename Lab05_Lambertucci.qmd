@@ -1,0 +1,81 @@
+---
+title: "lab05"
+author: "Cauê Esteves Lambertucci - 296094"
+format: pdf
+editor: visual
+---
+
+```{r}
+library(tidyverse)
+library(ggplot2)
+
+# Obs. 3, 4
+analisa_aeronave <- function(tail_number, arquivo) {
+
+  # Obs. 6
+  aeroportos <- read_csv("airports.csv", show_col_types = FALSE)
+
+  # Obs. 5
+  filtra_voos_do_aviao <- function(bloco, pos) {
+    bloco %>% filter(TAIL_NUMBER == tail_number)
+  }
+
+  # Obs. 2, 5
+  voos_do_aviao <- read_csv_chunked(
+    arquivo,
+    DataFrameCallback$new(filtra_voos_do_aviao),
+    chunk_size = 50000,
+    show_col_types = FALSE
+  )
+
+  # Parte 1.b
+  voos_ordenados <- voos_do_aviao %>%
+    arrange(YEAR, MONTH, DAY, SCHEDULED_DEPARTURE) %>%
+    mutate(velocidade_media = DISTANCE / (AIR_TIME / 60)) # Parte 1.d
+
+  # Obs. 6
+  trajeto_completo <- voos_ordenados %>%
+    left_join(aeroportos, by = c("ORIGIN_AIRPORT" = "IATA_CODE")) %>%
+    rename(latitude_origem = LATITUDE, longitude_origem = LONGITUDE) %>%
+    left_join(aeroportos, by = c("DESTINATION_AIRPORT" = "IATA_CODE")) %>%
+    rename(latitude_destino = LATITUDE, longitude_destino = LONGITUDE)
+
+  # Parte 1.c, Parte 1.d
+  mapa_base <- map_data("state")
+
+  grafico_trajeto <- ggplot() +
+    geom_polygon(
+      data = mapa_base,
+      aes(x = long, y = lat, group = group),
+      fill = "gray95", color = "white"
+    ) +
+    geom_segment(
+      data = trajeto_completo,
+      aes(
+        x = longitude_origem, y = latitude_origem,
+        xend = longitude_destino, yend = latitude_destino,
+        linewidth = velocidade_media
+      ),
+      color = "steelblue", alpha = 0.7
+    ) +
+    geom_point(
+      data = trajeto_completo,
+      aes(x = longitude_origem, y = latitude_origem),
+      color = "darkred", size = 2
+    ) +
+    coord_fixed(1.3) +
+    labs(
+      title = paste("Trajeto da aeronave", tail_number),
+      linewidth = "Velocidade média (mph)"
+    ) +
+    theme_minimal()
+
+  # Obs. 7
+  list(tabela = trajeto_completo, grafico = grafico_trajeto)
+}
+
+resultado <- analisa_aeronave("N431WN", "flights.csv")
+
+resultado$tabela
+resultado$grafico
+```

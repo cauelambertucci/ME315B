@@ -1,0 +1,116 @@
+---
+title: "Lista05_Lambertucci"
+author: "Caue Esteves Lambertucci"
+format: pdf
+editor: visual
+---
+
+```{r}
+library(DBI)
+library(RSQLite)
+
+# Conecta/Cria o arquivo
+con <- dbConnect(RSQLite::SQLite(), "me315.sqlite")
+```
+
+1. Qual seria a nova área (em acres) de cada reserva natural caso sua área atual fosse aumentada em 20%?
+
+```{sql connection=con}
+SELECT PNAME, ACRES AS AREA_ATUAL, ACRES * 1.20 AS NOVA_AREA
+FROM PRESERVE
+```
+
+2. Qual seria a área de cada reserva natural se sua área atual fosse reduzida para um terço do tamanho atual?
+
+```{sql connection=con}
+SELECT PNAME, ACRES AS AREA_ATUAL, ACRES / 3.0 AS AREA_AJUSTADA
+FROM PRESERVE
+```
+
+3. Para todas as reservas naturais, apresente o nome da reserva e sua taxa de entrada atual. Apresente também uma taxa ajustada.
+
+```{sql connection=con}
+SELECT PNAME, FEE AS TAXA_ATUAL, (FEE + 50.00) / 2 AS TAXA_AJUSTADA
+FROM PRESERVE
+```
+
+4. Apresente os valores médio, máximo e mínimo de ACRES para todas as reservas naturais localizadas no Arizona.
+
+```{sql connection=con}
+SELECT AVG(ACRES) AS MEDIA_ACRES, MAX(ACRES) AS MAX_ACRES, MIN(ACRES) AS MIN_ACRES
+FROM PRESERVE
+WHERE STATE = 'Arizona'
+```
+
+5. Apresente o primeiro nome de reserva em ordem alfabética.
+
+```{sql connection=con}
+SELECT PNAME
+FROM PRESERVE
+ORDER BY PNAME ASC
+LIMIT 1
+```
+
+6. Desconsidere as taxas de entrada iguais a zero. Quantas taxas de entrada distintas existem na tabela PRESERVE?
+
+```{sql connection=con}
+SELECT COUNT(DISTINCT FEE) AS QTD_TAXAS_DISTINTAS
+FROM PRESERVE
+WHERE FEE <> 0
+```
+
+7. Escreva uma instrução SELECT que demonstre que PNAME não contém atualmente valores duplicados.
+
+```{sql connection=con}
+SELECT PNAME, COUNT(*) AS QTD
+FROM PRESERVE
+GROUP BY PNAME
+HAVING COUNT(*) > 1
+```
+
+8. Suponha que você pretenda estabelecer uma nova política para o cálculo das taxas de entrada. Cada reserva natural cobrará uma taxa de US$ 0,02 por acre. Qual será a taxa média de entrada das reservas naturais localizadas no Arizona?
+
+```{sql connection=con}
+SELECT AVG(ACRES * 0.02) AS TAXA_MEDIA_NOVA
+FROM PRESERVE
+WHERE STATE = 'Arizona'
+```
+
+9. Suponha que o salário de cada funcionário seja aumentado em 10%. Apresente o número do funcionário, seu nome, salário antigo e novo salário. Ordene o resultado pelo novo salário.
+
+```{sql connection=con}
+SELECT ENO, ENAME, SALARY AS OLDSALARY, SALARY * 1.10 AS NEWSALARY
+FROM EMPLOYEE
+ORDER BY NEWSALARY
+```
+
+10. Modifique o exercício anterior. Apresente apenas os registros dos funcionários cujo novo salário seja superior a US$ 2.000,00.
+
+```{sql connection=con}
+SELECT ENO, ENAME, SALARY AS OLDSALARY, SALARY * 1.10 AS NEWSALARY
+FROM EMPLOYEE
+WHERE SALARY * 1.10 > 2000.00
+ORDER BY NEWSALARY
+```
+
+11. Apresente a soma, a média, o valor máximo e o valor mínimo de todos os valores de SALARY.
+
+```{sql connection=con}
+SELECT SUM(SALARY) AS SOMA_SALARIOS, AVG(SALARY) AS MEDIA_SALARIOS, MAX(SALARY) AS MAX_SALARIO, MIN(SALARY) AS MIN_SALARIO
+FROM EMPLOYEE
+```
+
+12. Quantos funcionários trabalham no Departamento 20?
+
+```{sql connection=con}
+SELECT COUNT(*) AS QTD_FUNCIONARIOS_DEPTO_20
+FROM EMPLOYEE
+WHERE DNO = 20
+```
+
+13. Quantos departamentos possuem funcionários?
+
+```{sql connection=con}
+SELECT COUNT(DISTINCT DNO) AS QTD_DEPARTAMENTOS
+FROM EMPLOYEE
+```
