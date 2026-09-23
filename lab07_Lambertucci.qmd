@@ -1,0 +1,95 @@
+---
+title: "lab07"
+author: "Caue Esteves Lambertucci"
+format: pdf
+editor: visual
+---
+
+1\.
+
+```{r}
+library(RSQLite)
+library(DBI)
+fname <- "database.sqlite3"
+conn <- dbConnect(SQLite(), fname)
+```
+
+2\.
+
+```{r}
+dbGetQuery(conn, "SELECT DISTINCT instructors.name
+                   FROM instructors
+                   INNER JOIN teachings ON instructors.id = teachings.instructor_id
+                   INNER JOIN sections ON teachings.section_uuid = sections.uuid
+                   INNER JOIN course_offerings ON sections.course_offering_uuid = course_offerings.uuid
+                   INNER JOIN subject_memberships ON course_offerings.uuid = subject_memberships.course_offering_uuid
+                   INNER JOIN subjects ON subject_memberships.subject_code = subjects.code
+                   WHERE subjects.abbreviation = 'STAT'")
+
+dbGetQuery(conn, "SELECT COUNT(DISTINCT instructors.id) AS quantidade
+                   FROM instructors
+                   INNER JOIN teachings ON instructors.id = teachings.instructor_id
+                   INNER JOIN sections ON teachings.section_uuid = sections.uuid
+                   INNER JOIN course_offerings ON sections.course_offering_uuid = course_offerings.uuid
+                   INNER JOIN subject_memberships ON course_offerings.uuid = subject_memberships.course_offering_uuid
+                   INNER JOIN subjects ON subject_memberships.subject_code = subjects.code
+                   WHERE subjects.abbreviation = 'STAT'")
+```
+
+2\.
+
+```{r}
+dbGetQuery(conn, "SELECT COUNT(DISTINCT instructors.id) AS quantidade
+                   FROM instructors
+                   INNER JOIN teachings ON instructors.id = teachings.instructor_id
+                   INNER JOIN sections ON teachings.section_uuid = sections.uuid
+                   INNER JOIN course_offerings ON sections.course_offering_uuid = course_offerings.uuid
+                   INNER JOIN subject_memberships ON course_offerings.uuid = subject_memberships.course_offering_uuid
+                   INNER JOIN subjects ON subject_memberships.subject_code = subjects.code
+                   WHERE subjects.abbreviation = 'STAT'")
+```
+
+3.  Professor mais difícil / mais fácil
+
+```{r}
+dbGetQuery(conn, "SELECT instructors.name,
+                   SUM(a_count*4 + ab_count*3.5 + b_count*3 + bc_count*2.5 + c_count*2 + d_count*1 + f_count*0)
+                   / SUM(a_count + ab_count + b_count + bc_count + c_count + d_count + f_count) AS gpa_medio
+                   FROM instructors
+                   INNER JOIN teachings ON instructors.id = teachings.instructor_id
+                   INNER JOIN sections ON teachings.section_uuid = sections.uuid
+                   INNER JOIN course_offerings ON sections.course_offering_uuid = course_offerings.uuid
+                   INNER JOIN subject_memberships ON course_offerings.uuid = subject_memberships.course_offering_uuid
+                   INNER JOIN subjects ON subject_memberships.subject_code = subjects.code
+                   INNER JOIN grade_distributions ON course_offerings.uuid = grade_distributions.course_offering_uuid
+                   WHERE subjects.abbreviation = 'STAT'
+                   GROUP BY instructors.name
+                   ORDER BY gpa_medio ASC")
+```
+
+3 . Disciplina mais dificil / mais facil
+
+```{r}
+dbGetQuery(conn, "SELECT courses.name,
+                   SUM(a_count*4 + ab_count*3.5 + b_count*3 + bc_count*2.5 + c_count*2 + d_count*1 + f_count*0)
+                   / SUM(a_count + ab_count + b_count + bc_count + c_count + d_count + f_count) AS gpa_medio
+                   FROM courses
+                   INNER JOIN course_offerings ON courses.uuid = course_offerings.course_uuid
+                   INNER JOIN subject_memberships ON course_offerings.uuid = subject_memberships.course_offering_uuid
+                   INNER JOIN subjects ON subject_memberships.subject_code = subjects.code
+                   INNER JOIN grade_distributions ON course_offerings.uuid = grade_distributions.course_offering_uuid
+                   WHERE subjects.abbreviation = 'STAT'
+                   GROUP BY courses.name
+                   ORDER BY gpa_medio ASC")
+```
+
+4\.
+
+```{r}
+dbDisconnect(conn)
+```
+
+```{r}
+Sys.setenv(TZ = "America/Sao_Paulo")
+Sys.time()
+```
